@@ -38,7 +38,8 @@ public class CollecItem : MonoBehaviour
         }
         if (other.CompareTag("Fuel"))
         {
-
+            m_Fuel += 20;
+            m_Hp -= 20;
             m_Damaged += 20;
         }
         if (other.CompareTag("Capacity"))

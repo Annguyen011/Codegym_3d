@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 namespace Codegym
@@ -12,7 +13,7 @@ namespace Codegym
         [SerializeField] private float m_Speed;
         [SerializeField] private float m_RotationSpeed;
         [SerializeField] private DriveMode m_driveMode;
-        
+
 
 
         private Rigidbody m_rb;
@@ -23,11 +24,19 @@ namespace Codegym
         }
         private void Reset()
         {
-            this.GetWaypoint();
+            if (m_waypoints.Count == 0)
+            {
+                this.GetWaypoint();
+            }
+
         }
         private void Start()
         {
-            this.GetWaypoint();
+            m_rb.centerOfMass = _certerOffMass;
+            if (m_waypoints.Count == 0)
+            {
+                this.GetWaypoint();
+            }
         }
         private void FixedUpdate()
         {
@@ -53,15 +62,15 @@ namespace Codegym
         public void GetWaypoint()
         {
             GameObject tempWaypoints = GameObject.Find("Waypoints");
-            foreach(Transform waypoint in tempWaypoints.transform)
+            foreach (Transform waypoint in tempWaypoints.transform)
             {
                 this.m_waypoints.Add(waypoint);
             }
         }
-        
+
         public void AutoRunInWay()
         {
-             
+
             if (currentIndexWaypoint >= m_waypoints.Count)
             {
                 currentIndexWaypoint = 0;
@@ -75,18 +84,58 @@ namespace Codegym
         }
         public void Moving()
         {
-
-            float moveInput = Input.GetAxis("Vertical");
-            float rotateInput = Input.GetAxis("Horizontal");
-
-            // Di chuyển theo hướng trước và sau
-            Vector3 movement = transform.forward * moveInput * m_Speed;
-            m_rb.AddForce(movement);
-
-            // Quay đầu
-            Quaternion rotation = Quaternion.Euler(0f, rotateInput * m_RotationSpeed * Time.fixedDeltaTime, 0f);
-            m_rb.MoveRotation(m_rb.rotation * rotation);
+            this.GetInput();
+        }
+        private void LateUpdate()
+        {
+            Steer();
+            Move();
         }
 
+        // ================================= Car moving =================================
+        public enum Axel
+        {
+            Front,
+            Rear
+        }
+        [Serializable]
+        public struct Wheel
+        {
+            public GameObject wheelModel;
+            public WheelCollider wheelCollider;
+            public Axel axel;
+        }
+        public float maxAcceleration = 30f;
+        public float breakeAcceleration = 50f;
+        public float turnSensivity = 1f;
+        public float maxSteerAngle = 30f;
+        public Vector3 _certerOffMass;  
+        public List<Wheel> wheels;
+        float moveInput;
+        float steerInput;
+        void GetInput()
+        {
+            steerInput   = Input.GetAxis("Horizontal");
+            moveInput = Input.GetAxis("Vertical");
+        }
+        void Move()
+        {
+            foreach (var wheel in wheels)
+            {
+                wheel.wheelCollider.motorTorque = moveInput * m_Speed* maxAcceleration * Time.deltaTime;
+            }
+        }
+        void Steer()
+        {
+            foreach(var wheel in wheels)
+            {
+                if (wheel.axel == Axel.Front)
+                {
+                    var _steerAngle = steerInput * turnSensivity * maxSteerAngle;
+                    wheel.wheelCollider.steerAngle = Mathf.Lerp(wheel.wheelCollider.steerAngle, _steerAngle, 0.06f);
+                }
+            }
+        }
     }
+
 }
